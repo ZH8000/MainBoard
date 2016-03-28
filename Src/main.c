@@ -31,9 +31,11 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
 #include <string.h>
+#include "stm32f4xx_hal.h"
 #include "UARTHelper.h"
+#include "global.h"
+#include "UARTHandler.h"
 
 
 /* Private variables ---------------------------------------------------------*/
@@ -53,17 +55,36 @@ static void MX_DMA_Init(void);
 static void initUART(void);
 
 
-UartInterface uartInterfaces[8];
 
 void initUART(void) {
-	MX_UART_Init(&(uartInterfaces[0].uartHandler), USART1);
-	MX_UART_Init(&(uartInterfaces[1].uartHandler), USART2);
-	MX_UART_Init(&(uartInterfaces[2].uartHandler), USART3);
-	MX_UART_Init(&(uartInterfaces[3].uartHandler), UART4);
-	MX_UART_Init(&(uartInterfaces[4].uartHandler), UART5);
-	MX_UART_Init(&(uartInterfaces[5].uartHandler), USART6);
-	MX_UART_Init(&(uartInterfaces[6].uartHandler), UART7);
-	MX_UART_Init(&(uartInterfaces[7].uartHandler), UART8);
+	MX_UART_Init(&(uartInterfaces[0].uartHandler), USART1, 9600);
+	MX_UART_Init(&(uartInterfaces[1].uartHandler), USART2, 9600);
+	MX_UART_Init(&(uartInterfaces[2].uartHandler), USART3, 9600);
+	MX_UART_Init(&(uartInterfaces[3].uartHandler), UART4, 9600);
+	MX_UART_Init(&(uartInterfaces[4].uartHandler), UART5, 9600);
+	MX_UART_Init(&(uartInterfaces[5].uartHandler), USART6, 9600);
+	MX_UART_Init(&(uartInterfaces[6].uartHandler), UART7, 9600);
+	MX_UART_Init(&(uartInterfaces[7].uartHandler), UART8, 9600);
+	namedInterface.pcUART = &uartInterfaces[0];
+	
+	for (int i = 0; i < 7; i++) {
+	  namedInterface.daughterBoards[i].uartInterface = &uartInterfaces[i+1];
+		namedInterface.daughterBoards[i].isBoardInserted[0] = false;
+		namedInterface.daughterBoards[i].isBoardInserted[1] = false;
+		memset(&namedInterface.daughterBoards[i].uuid[0], 0, 40);
+		memset(&namedInterface.daughterBoards[i].uuid[1], 0, 40);
+	}
+	
+	for (int i = 0; i < 8; i++) {
+		uartInterfaces[i].busyCount = 0;
+		uartInterfaces[i].receivedBytes = 0;
+		uartInterfaces[i].bufferQueue.queueHead = NULL;
+		uartInterfaces[i].bufferQueue.queueTail = NULL;
+		
+		memset(uartInterfaces[i].buffer, 0, 100);
+		memset(uartInterfaces[i].content, 0, 100);
+	}
+	
 }
 
 int main(void)
@@ -90,51 +111,51 @@ int main(void)
 	startUARTReceiveDMA(&uartInterfaces[5]);
 	startUARTReceiveDMA(&uartInterfaces[6]);
 	startUARTReceiveDMA(&uartInterfaces[7]);
-	char * message = "Hello World\r\n";
+	uint32_t lastTime = 0;
+	
 	/*	Infinite loop */
   while (1)
   {
-		HAL_UART_Transmit(&uartInterfaces[0].uartHandler, (uint8_t *) message, strlen(message), 100);
-		HAL_Delay(500);
+		processUARTContent(uartReceiverCallback);
+		uint32_t tick = HAL_GetTick();
+		uint32_t round = tick / 1000;
+		
+		if (lastTime != round) {
+			//debugMessage("Hello World:%d\n", tick);
+			//sendToUART(namedInterface.pcUART, "Tick: %d\n", tick);
+		  //sendToUART(&uartInterfaces[0], "Hello World:%d\n", round);
+		}
+		lastTime = round;		
   }
 
 }
 
 
-UartInterface * getUARTInterface(UART_HandleTypeDef *huart, int * whichUART) {
+UartInterface * getUARTInterface(UART_HandleTypeDef *huart) {
 	if (huart == &(uartInterfaces[0].uartHandler)) {
-		*whichUART = 1;
 		return &(uartInterfaces[0]);
 	}
 	else if (huart == &(uartInterfaces[1].uartHandler)) {
-		*whichUART = 2;
 		return &(uartInterfaces[1]);
 	}
 	else if (huart == &(uartInterfaces[2].uartHandler)) {
-		*whichUART = 3;
 		return &(uartInterfaces[2]);
 	}
 	else if (huart == &(uartInterfaces[3].uartHandler)) {
-		*whichUART = 4;
 		return &(uartInterfaces[3]);
 	}
 	else if (huart == &(uartInterfaces[4].uartHandler)) {
-		*whichUART = 5;
 		return &(uartInterfaces[4]);
 	}
 	else if (huart == &(uartInterfaces[5].uartHandler)) {
-		*whichUART = 6;
 		return &(uartInterfaces[5]);
 	}
 	else if (huart == &(uartInterfaces[6].uartHandler)) {
-		*whichUART = 7;		
 		return &(uartInterfaces[6]);
 	}
 	else if (huart == &(uartInterfaces[7].uartHandler)) {
-		*whichUART = 8;				
 		return &(uartInterfaces[7]);
 	} else {
-		*whichUART = -1;						
 		return NULL;
 	}
 }
