@@ -21,7 +21,7 @@ void uartReceiverCallback(UartInterface * uartInterface, char * content) {
 	DaughterBoard * daughterBoard = getDaughterBoard(uartInterface, &whichBoard);
 	
 	if (daughterBoard != NULL) {
-		debugMessage("Receive DB[%d]: %s\n", whichBoard, content);
+		//debugMessage("Receive DB[%d]: %s\n", whichBoard, content);
 		int commandLength = strlen(content);
 		bool isPingCommand = 
 			content[0] == '$' && 
@@ -39,7 +39,12 @@ void uartReceiverCallback(UartInterface * uartInterface, char * content) {
 		if (isPingCommand) {
 			int whichTB = content[6] - 48;
 			bool isInserted = content[8]  == '1';
-			debugMessage("PING Command: %s, whichTB = %d, isInserted = %d\n", content, whichTB, isInserted);
+			namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB] = isInserted;
+			if (commandLength == 47) {
+				strncpy(namedInterface.daughterBoards[whichBoard].uuid[whichTB], content + 10, 36);
+				debugMessage("UUID2:%s\n", namedInterface.daughterBoards[whichBoard].uuid[whichTB]);
+			}
+			debugMessage("PING Command: %s, whichTB = %d, isInserted = %d, len=%d\n", content, whichTB, isInserted, strlen(content));
 		} else if (isResponse) {
 			sendToUART(&uartInterfaces[0], "Received daughterBoard[%d]: %s\n", whichBoard, content);
 		}

@@ -71,16 +71,13 @@ void initUART(void) {
 	  namedInterface.daughterBoards[i].uartInterface = &uartInterfaces[i+1];
 		namedInterface.daughterBoards[i].isBoardInserted[0] = false;
 		namedInterface.daughterBoards[i].isBoardInserted[1] = false;
-		memset(&namedInterface.daughterBoards[i].uuid[0], 0, 40);
-		memset(&namedInterface.daughterBoards[i].uuid[1], 0, 40);
+		memset(&namedInterface.daughterBoards[i].uuid[0], 0, 41);
+		memset(&namedInterface.daughterBoards[i].uuid[1], 0, 41);
 	}
 	
 	for (int i = 0; i < 8; i++) {
 		uartInterfaces[i].busyCount = 0;
 		uartInterfaces[i].receivedBytes = 0;
-		uartInterfaces[i].bufferQueue.queueHead = NULL;
-		uartInterfaces[i].bufferQueue.queueTail = NULL;
-		
 		memset(uartInterfaces[i].buffer, 0, 100);
 		memset(uartInterfaces[i].content, 0, 100);
 	}

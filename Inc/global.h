@@ -10,7 +10,7 @@
 typedef struct {
 	UartInterface * uartInterface;
 	bool isBoardInserted[2];
-	char uuid[2][40];
+	char uuid[2][37];
 } DaughterBoard;
 
 typedef struct {
