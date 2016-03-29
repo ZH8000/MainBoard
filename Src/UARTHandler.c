@@ -15,6 +15,79 @@ DaughterBoard * getDaughterBoard(UartInterface * uartInterface, int * whichBoard
 	return NULL;
 }
 
+void registerTestBoard(DaughterBoard * daughterBoard, int whichTB, char * content, int offset) {
+	daughterBoard->isBoardInserted[whichTB] = true;
+	strncpy(daughterBoard->uuid[whichTB], content + offset, 36);
+}
+
+void unregisterTestBoard(DaughterBoard * daughterBoard, int whichTB) {
+	daughterBoard->isBoardInserted[whichTB] = false;
+	memset(daughterBoard->uuid[whichTB], 0, 37);
+}
+
+int count2 = 0;
+void processDaughterBoardResponse(DaughterBoard * daughterBoard, int whichBoard, char * response) {
+	char commandCode = response[3];
+	int whichTB = response[1] - 48;
+	debugMessage("Received daughterBoard[%d]: %s\n", count2, response);
+	
+	switch(commandCode) {
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+			count2++;
+		case 'f':
+			registerTestBoard(daughterBoard, whichTB, response, 5);
+			break;
+		case 'g':
+			unregisterTestBoard(daughterBoard, whichTB);
+			break;
+		default:
+			break;
+	}
+	
+}
+
+int isCorrectCommandFromPC(char * command) {
+	return strlen(command) == 9 &&
+				 (*(command+0) == '$') &&
+				 (*(command+1) == '0' || *(command+1) == '1') &&
+				 (*(command+2) == '$') &&
+				 (*(command+3) == '0' || *(command+3) == '1') &&
+				 (*(command+4) == '$') &&
+				 (*(command+6) == '$') &&
+				 (*(command+8) == '$');
+	
+}
+int count = 0;
+
+void processPCCommand(char * command) {
+	char commandCode = command[5];
+	int whichBoard = command[1] - 48;
+	int whichTB = command[3] - 48; 
+	
+	switch(commandCode) {
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+			if (namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
+				debugMessage("command[%d]: %s\n", count, command);
+				sendToUART(namedInterface.daughterBoards[whichBoard].uartInterface, "%s\n", command + 2);
+				count++;
+			} else {
+				sendToUART(namedInterface.pcUART, "#NOTFOUND#%d#%d#\n", whichBoard, whichTB);
+			}
+			break;
+		case 'f':
+			break;
+		default:
+			break;
+	}
+}
 
 void uartReceiverCallback(UartInterface * uartInterface, char * content) {
 	int whichBoard = -1;
@@ -24,32 +97,46 @@ void uartReceiverCallback(UartInterface * uartInterface, char * content) {
 		//debugMessage("Receive DB[%d]: %s\n", whichBoard, content);
 		int commandLength = strlen(content);
 		bool isPingCommand = 
-			content[0] == '$' && 
-			content[1] == 'P' &&
-			content[2] == 'I' &&
-			content[3] == 'N' &&
-			content[4] == 'G' &&
-			content[5] == '$' &&
+			commandLength > 9 &&
+			(content[0] == '$') && 
+			(content[1] == 'P') &&
+			(content[2] == 'I') &&
+			(content[3] == 'N') &&
+			(content[4] == 'G') &&
+			(content[5] == '$') &&
 			(content[6] == '0' || content[6] == '1') &&
-			content[7] == '$' &&
+			(content[7] == '$') &&
 			(content[8] == '0' || content[8] == '1') &&
-			content[commandLength-1] == '$';
+			(content[commandLength-1]) == '$';
 		
-		bool isResponse = content[0] == '#' && content[2] == '#' && content[commandLength-1] == '#';
+		bool isResponse = 
+			commandLength > 3 &&
+			(content[0] == '#') && 
+			(content[1] == '0' || content[1] == '1') &&
+		  (content[2] == '#') && 
+			(content[commandLength-1] == '#');
+		
 		if (isPingCommand) {
 			int whichTB = content[6] - 48;
 			bool isInserted = content[8]  == '1';
 			namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB] = isInserted;
+			
 			if (commandLength == 47) {
-				strncpy(namedInterface.daughterBoards[whichBoard].uuid[whichTB], content + 10, 36);
-				debugMessage("UUID2:%s\n", namedInterface.daughterBoards[whichBoard].uuid[whichTB]);
+				registerTestBoard(daughterBoard, whichTB, content, 10);
 			}
-			debugMessage("PING Command: %s, whichTB = %d, isInserted = %d, len=%d\n", content, whichTB, isInserted, strlen(content));
+			
+			sendToUART(uartInterface, "#PONG#\n");
+			
 		} else if (isResponse) {
-			sendToUART(&uartInterfaces[0], "Received daughterBoard[%d]: %s\n", whichBoard, content);
+			processDaughterBoardResponse(daughterBoard, whichBoard, content);
 		}
 	} else if (uartInterface == namedInterface.pcUART) {
-		debugMessage("Received from PC: %s\n", content);		
+		
+		if (isCorrectCommandFromPC(content)) {
+			processPCCommand(content);
+		} else {
+			debugMessage("Received from PC: %s\n", content);		
+		}
 	}
 	
 }
