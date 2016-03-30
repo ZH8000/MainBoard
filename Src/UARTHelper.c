@@ -82,7 +82,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 			uartInterface->buffer[uartInterface->bufferCounter] = receiveChar;
 			uartInterface->bufferCounter++;
 		}
-		startUARTReceiveDMA(uartInterface);	
+		//startUARTReceiveDMA(uartInterface);	
 	}
 }
 
