@@ -72,7 +72,7 @@ void processPCCommand(char * command) {
 		case 'd':
 		case 'e':
 			if (true) { //namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
-				HAL_StatusTypeDef status = sendToUART(namedInterface.daughterBoards[whichBoard].uartInterface, "%s\n", command + 2);
+				sendToUART(namedInterface.daughterBoards[whichBoard].uartInterface, "%s\n", command + 2);
 			} else {
 				sendToUART(namedInterface.pcUART, "#NOTFOUND#%d#%d#\n", whichBoard, whichTB);
 			}
