@@ -13,8 +13,8 @@ typedef struct {
 	bool shouldProcessContent;
 	uint32_t busyCount;
 	uint32_t receivedBytes;
-	bool hasData[10];
-	char buffer2[10][100];
+	bool hasData[30];
+	char buffer2[30][100];
 	int writeCounter;
 	int readCounter;	
 } UartInterface ;

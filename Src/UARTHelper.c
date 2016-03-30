@@ -16,7 +16,7 @@ void processUARTContent(UartContentCallback callback) {
 			//debugMessage("ProcessedMain[w: %d, r:%d] = %s\n", uartInterface->writeCounter, uartInterface->readCounter, message);
 			callback(uartInterface, message);
 			uartInterface->hasData[uartInterface->readCounter] = false;
-			uartInterface->readCounter = (uartInterface->readCounter+1) % 10;
+			uartInterface->readCounter = (uartInterface->readCounter+1) % 30;
 		}
 
 	}
@@ -74,7 +74,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 			memset(uartInterface->buffer2[currentWriteCount], 0, 100);
 			strncpy((char *)uartInterface->buffer2[currentWriteCount], uartInterface->buffer, 100);
 			uartInterface->hasData[currentWriteCount] = true;
-			uartInterface->writeCounter = (currentWriteCount + 1) % 10;
+			uartInterface->writeCounter = (currentWriteCount + 1) % 30;
 			
 			memset(uartInterface->buffer, 0, 100);
 			uartInterface->bufferCounter = 0;
