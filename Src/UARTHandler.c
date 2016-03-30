@@ -29,7 +29,7 @@ int count2 = 0;
 void processDaughterBoardResponse(DaughterBoard * daughterBoard, int whichBoard, char * response) {
 	char commandCode = response[3];
 	int whichTB = response[1] - 48;
-	debugMessage("Received daughterBoard[%d]: %s\n", count2, response);
+	debugMessage("respond[%d]: %s\n", count2, response);
 	
 	switch(commandCode) {
 		case 'a':
@@ -37,6 +37,7 @@ void processDaughterBoardResponse(DaughterBoard * daughterBoard, int whichBoard,
 		case 'c':
 		case 'd':
 		case 'e':
+			sendToUART(namedInterface.pcUART, "#%d%s\n", whichBoard, response);
 			count2++;
 		case 'f':
 			registerTestBoard(daughterBoard, whichTB, response, 5);
@@ -74,9 +75,9 @@ void processPCCommand(char * command) {
 		case 'c':
 		case 'd':
 		case 'e':
-			if (namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
-				debugMessage("command[%d]: %s\n", count, command);
-				sendToUART(namedInterface.daughterBoards[whichBoard].uartInterface, "%s\n", command + 2);
+			if (true) { //namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
+				HAL_StatusTypeDef status = sendToUART(namedInterface.daughterBoards[whichBoard].uartInterface, "%s\n", command + 2);
+				debugMessage("command[%d]: %s, status=%d\n", count, command, status);
 				count++;
 			} else {
 				sendToUART(namedInterface.pcUART, "#NOTFOUND#%d#%d#\n", whichBoard, whichTB);
