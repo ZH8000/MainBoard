@@ -4,19 +4,28 @@
 #include "UARTHelper.h"
 #include <stdlib.h>
 
+void initUARTInterface(UartInterface * uartInterface) {
+	uartInterface->readCounter = 0;
+	uartInterface->writeCounter = 0;
+	for (int j = 0; j < CONTENT_QUEUE_NUM; j++) {
+		uartInterface->hasData[j] = false;
+		memset(uartInterface->content[j], 0, CONTENT_QUEUE_SIZE);
+	}
+	
+}
+
 void processUARTContent(UartContentCallback callback) {
-	char message[100] = {0};
+	char message[CONTENT_QUEUE_SIZE] = {0};
 	
 	for (int i = 0; i < 8; i++) {
 		UartInterface * uartInterface = &uartInterfaces[i];
 		
 		while (uartInterface->hasData[uartInterface->readCounter]) {
-			memset(message, 0, 100);
-			strncpy(message, (char *) uartInterface->buffer2[uartInterface->readCounter], 100);
-			//debugMessage("ProcessedMain[w: %d, r:%d] = %s\n", uartInterface->writeCounter, uartInterface->readCounter, message);
+			memset(message, 0, CONTENT_QUEUE_SIZE);
+			strncpy(message, (char *) uartInterface->content[uartInterface->readCounter], CONTENT_QUEUE_SIZE);
 			callback(uartInterface, message);
 			uartInterface->hasData[uartInterface->readCounter] = false;
-			uartInterface->readCounter = (uartInterface->readCounter+1) % 30;
+			uartInterface->readCounter = (uartInterface->readCounter+1) % CONTENT_QUEUE_NUM;
 		}
 
 	}
@@ -25,22 +34,22 @@ void processUARTContent(UartContentCallback callback) {
 
 void debugMessage(char * format, ...) {
 	#ifdef DEBUG
-		char message[100] = {0};
+		char message[CONTENT_QUEUE_SIZE] = {0};
 		va_list argptr;
 		va_start(argptr,format);
-		vsnprintf(message, 100, format, argptr);
+		vsnprintf(message, CONTENT_QUEUE_SIZE, format, argptr);
 		va_end(argptr);
-		HAL_UART_Transmit(&DEBUG_UART->uartHandler, (uint8_t *) message, strlen(message), 100);		
+		HAL_UART_Transmit(&DEBUG_UART->uartHandler, (uint8_t *) message, strlen(message), CONTENT_QUEUE_SIZE);		
 	#endif
 }
 
 HAL_StatusTypeDef sendToUART(UartInterface * uartInterface, char * format, ...) {
-	char message[100] = {0};
+	char message[CONTENT_QUEUE_SIZE] = {0};
 	va_list argptr;
 	va_start(argptr,format);
-	vsnprintf(message, 100, format, argptr);
+	vsnprintf(message, CONTENT_QUEUE_SIZE, format, argptr);
 	va_end(argptr);
-	return HAL_UART_Transmit(&uartInterface->uartHandler, (uint8_t *) message, strlen(message), 100);		
+	return HAL_UART_Transmit(&uartInterface->uartHandler, (uint8_t *) message, strlen(message), CONTENT_QUEUE_SIZE);		
 }
 
 
@@ -49,7 +58,6 @@ void startUARTReceiveDMA(UartInterface * uartInterface) {
 	HAL_StatusTypeDef status = HAL_UART_Receive_DMA(&(uartInterface->uartHandler), &(uartInterface->rxBuffer), 1);
 	
 	while (status != HAL_OK && retries < 10) {
-		uartInterface->busyCount++;
 		HAL_UART_DeInit(&(uartInterface->uartHandler));
 		HAL_UART_Init(&(uartInterface->uartHandler));
 		status = HAL_UART_Receive_DMA(&(uartInterface->uartHandler), &(uartInterface->rxBuffer), 1);
@@ -60,29 +68,25 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	
 	//__HAL_UART_FLUSH_DRREGISTER(huart);
 	UartInterface * uartInterface = getUARTInterface(huart);
-	uartInterface->receivedBytes++;
 	
 	if (uartInterface != NULL) {
 		
 		uint8_t receiveChar = *(huart->pRxBuffPtr);
 		
 		if (receiveChar == '\n') {
-			strncpy(uartInterface->content, uartInterface->buffer, 100);
-			uartInterface->shouldProcessContent = true;			
 			
 			int currentWriteCount = uartInterface->writeCounter;
-			memset(uartInterface->buffer2[currentWriteCount], 0, 100);
-			strncpy((char *)uartInterface->buffer2[currentWriteCount], uartInterface->buffer, 100);
+			memset(uartInterface->content[currentWriteCount], 0, CONTENT_QUEUE_SIZE);
+			strncpy((char *)uartInterface->content[currentWriteCount], uartInterface->buffer, CONTENT_QUEUE_SIZE);
 			uartInterface->hasData[currentWriteCount] = true;
-			uartInterface->writeCounter = (currentWriteCount + 1) % 30;
+			uartInterface->writeCounter = (currentWriteCount + 1) % CONTENT_QUEUE_NUM;
 			
-			memset(uartInterface->buffer, 0, 100);
+			memset(uartInterface->buffer, 0, CONTENT_QUEUE_SIZE);
 			uartInterface->bufferCounter = 0;
 		} else {
 			uartInterface->buffer[uartInterface->bufferCounter] = receiveChar;
 			uartInterface->bufferCounter++;
 		}
-		//startUARTReceiveDMA(uartInterface);	
 	}
 }
 

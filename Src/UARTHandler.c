@@ -25,11 +25,9 @@ void unregisterTestBoard(DaughterBoard * daughterBoard, int whichTB) {
 	memset(daughterBoard->uuid[whichTB], 0, 37);
 }
 
-int count2 = 0;
 void processDaughterBoardResponse(DaughterBoard * daughterBoard, int whichBoard, char * response) {
 	char commandCode = response[3];
 	int whichTB = response[1] - 48;
-	debugMessage("respond[%d]: %s\n", count2, response);
 	
 	switch(commandCode) {
 		case 'a':
@@ -38,7 +36,6 @@ void processDaughterBoardResponse(DaughterBoard * daughterBoard, int whichBoard,
 		case 'd':
 		case 'e':
 			sendToUART(namedInterface.pcUART, "#%d%s\n", whichBoard, response);
-			count2++;
 		case 'f':
 			registerTestBoard(daughterBoard, whichTB, response, 5);
 			break;
@@ -62,7 +59,6 @@ int isCorrectCommandFromPC(char * command) {
 				 (*(command+8) == '$');
 	
 }
-int count = 0;
 
 void processPCCommand(char * command) {
 	char commandCode = command[5];
@@ -77,8 +73,6 @@ void processPCCommand(char * command) {
 		case 'e':
 			if (true) { //namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
 				HAL_StatusTypeDef status = sendToUART(namedInterface.daughterBoards[whichBoard].uartInterface, "%s\n", command + 2);
-				debugMessage("command[%d]: %s, status=%d\n", count, command, status);
-				count++;
 			} else {
 				sendToUART(namedInterface.pcUART, "#NOTFOUND#%d#%d#\n", whichBoard, whichTB);
 			}
@@ -95,7 +89,6 @@ void uartReceiverCallback(UartInterface * uartInterface, char * content) {
 	DaughterBoard * daughterBoard = getDaughterBoard(uartInterface, &whichBoard);
 	
 	if (daughterBoard != NULL) {
-		//debugMessage("Receive DB[%d]: %s\n", whichBoard, content);
 		int commandLength = strlen(content);
 		bool isPingCommand = 
 			commandLength > 9 &&
