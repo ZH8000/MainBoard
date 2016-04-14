@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define DEBUG_UART									(&uartInterfaces[0])
-#define DEBUG												
+//#define DEBUG												
 
 typedef struct {
 	UartInterface * uartInterface;

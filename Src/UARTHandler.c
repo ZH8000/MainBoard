@@ -36,6 +36,7 @@ void processDaughterBoardResponse(DaughterBoard * daughterBoard, int whichBoard,
 		case 'd':
 		case 'e':
 			sendToUART(namedInterface.pcUART, "#%d%s\n", whichBoard, response);
+			break;
 		case 'f':
 			registerTestBoard(daughterBoard, whichTB, response, 5);
 			break;
@@ -51,7 +52,13 @@ void processDaughterBoardResponse(DaughterBoard * daughterBoard, int whichBoard,
 int isCorrectCommandFromPC(char * command) {
 	return strlen(command) == 9 &&
 				 (*(command+0) == '$') &&
-				 (*(command+1) == '0' || *(command+1) == '1') &&
+				 (*(command+1) == '0' || 
+	        *(command+1) == '1' || 
+	        *(command+1) == '2' || 
+	        *(command+1) == '3' || 
+	        *(command+1) == '4' || 
+	        *(command+1) == '5' || 
+	        *(command+1) == '6') &&
 				 (*(command+2) == '$') &&
 				 (*(command+3) == '0' || *(command+3) == '1') &&
 				 (*(command+4) == '$') &&
@@ -61,6 +68,8 @@ int isCorrectCommandFromPC(char * command) {
 }
 
 void processPCCommand(char * command) {
+	debugMessage("command: %s\n", command);
+	
 	char commandCode = command[5];
 	int whichBoard = command[1] - 48;
 	int whichTB = command[3] - 48; 
@@ -71,13 +80,18 @@ void processPCCommand(char * command) {
 		case 'c':
 		case 'd':
 		case 'e':
-			if (true) { //namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
+			if (namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
 				sendToUART(namedInterface.daughterBoards[whichBoard].uartInterface, "%s\n", command + 2);
 			} else {
 				sendToUART(namedInterface.pcUART, "#NOTFOUND#%d#%d#\n", whichBoard, whichTB);
 			}
 			break;
 		case 'f':
+			if (namedInterface.daughterBoards[whichBoard].isBoardInserted[whichTB]) {
+				sendToUART(namedInterface.pcUART, "#%d#%d#f#%s#\n", whichBoard, whichTB, namedInterface.daughterBoards[whichBoard].uuid[whichTB]);
+			} else {
+				sendToUART(namedInterface.pcUART, "#NOTFOUND#%d#%d#\n", whichBoard, whichTB);
+			}
 			break;
 		default:
 			break;
@@ -87,6 +101,7 @@ void processPCCommand(char * command) {
 void uartReceiverCallback(UartInterface * uartInterface, char * content) {
 	int whichBoard = -1;
 	DaughterBoard * daughterBoard = getDaughterBoard(uartInterface, &whichBoard);
+	debugMessage("content:%s\n", content);
 	
 	if (daughterBoard != NULL) {
 		int commandLength = strlen(content);
